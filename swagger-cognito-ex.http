@@ -1,0 +1,6 @@
+@swagger_cognito_ex_HostAddress = http://localhost:5012
+
+GET {{swagger_cognito_ex_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
