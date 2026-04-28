@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace swagger_cognito_ex.Controllers;
@@ -21,5 +22,42 @@ public class WeatherForecastController : ControllerBase
             Summary = Summaries[Random.Shared.Next(Summaries.Length)]
         })
         .ToArray();
+    }
+
+    [Authorize]
+    [HttpGet("protected")]
+    public IActionResult GetProtected()
+    {
+        var userId = User.FindFirst("sub")?.Value;
+        var email = User.FindFirst("email")?.Value;
+
+        return Ok(new
+        {
+            message = "200 - Token is valid, access granted",
+            userId,
+            email
+        });
+    }
+
+    [HttpGet("public")]
+    public IActionResult GetPublic()
+    {
+        return Ok(new { message = "Public endpoint - no auth required" });
+    }
+
+    [HttpGet("test-cognito-error")]
+    public IActionResult TestCognitoError()
+    {
+        // Simulează o cerere la Cognito endpoint care nu există
+        var httpClient = new HttpClient();
+        try
+        {
+            var result = httpClient.GetAsync("https://cognito-idp.eu-north-1.amazonaws.com/invalid-endpoint").Result;
+        }
+        catch (Exception ex)
+        {
+            throw new HttpRequestException("Cognito service unreachable", ex);
+        }
+        return Ok();
     }
 }
