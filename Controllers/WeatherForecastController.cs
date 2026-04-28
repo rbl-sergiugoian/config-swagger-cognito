@@ -28,15 +28,7 @@ public class WeatherForecastController : ControllerBase
     [HttpGet("protected")]
     public IActionResult GetProtected()
     {
-        var userId = User.FindFirst("sub")?.Value;
-        var email = User.FindFirst("email")?.Value;
-
-        return Ok(new
-        {
-            message = "200 - Token is valid, access granted",
-            userId,
-            email
-        });
+        return Ok("Access granted");
     }
 
     [HttpGet("public")]

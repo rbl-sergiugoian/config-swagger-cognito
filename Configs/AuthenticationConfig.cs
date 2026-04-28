@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 namespace swagger_cognito_ex.Configs;
 
@@ -7,8 +9,8 @@ public static class AuthenticationConfig
     public static void AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
         var cognitoSettings = configuration.GetSection("Cognito");
-        var authority = cognitoSettings["Authority"];
-        var audience = cognitoSettings["Audience"];
+        var authority = configuration["AWS:Cognito:Authority"];
+        var clientId = configuration["AWS:Cognito:ClientId"];
 
         services.AddAuthentication(options =>
         {
@@ -18,7 +20,6 @@ public static class AuthenticationConfig
         .AddJwtBearer(options =>
         {
             options.Authority = authority;
-            options.Audience = audience;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -31,6 +32,7 @@ public static class AuthenticationConfig
             {
                 OnChallenge = context =>
                 {
+                    Console.WriteLine(">>> OnAuthenticationChallange called");
                     var authHeader = context.Request.Headers.Authorization.ToString();
 
                     if (string.IsNullOrEmpty(authHeader))
@@ -49,6 +51,7 @@ public static class AuthenticationConfig
                 },
                 OnAuthenticationFailed = context =>
                 {
+                    Console.WriteLine(">>> OnAuthenticationFailed called");
                     var exception = context.Exception;
                     Console.WriteLine($"Authentication failed: {exception?.GetType().Name}");
                     Console.WriteLine($"Exception message: {exception?.Message}");
@@ -92,8 +95,26 @@ public static class AuthenticationConfig
                 },
                 OnTokenValidated = context =>
                 {
-                    var userId = context.Principal?.FindFirst("sub")?.Value;
-                    Console.WriteLine($"Token validated successfully for user: {userId}");
+                    Console.WriteLine(">>> OnTokenValidated called");
+                    var jwtToken = context.SecurityToken as JwtSecurityToken;
+                    var claimsIdentity = context.Principal?.Identity as ClaimsIdentity;
+
+                    if (jwtToken != null && claimsIdentity != null)
+                    {
+                        // Mapează claimurile din token la identity
+                        foreach (var claim in jwtToken.Claims)
+                        {
+                            // Adaugă claim dacă nu există deja
+                            if (!claimsIdentity.Claims.Any(c => c.Type == claim.Type))
+                            {
+                                claimsIdentity.AddClaim(new System.Security.Claims.Claim(claim.Type, claim.Value));
+                            }
+                        }
+
+                        var userId = context.Principal?.FindFirst("sub")?.Value;
+                        Console.WriteLine($"Token validated successfully for user: {userId}");
+                    }
+
                     return Task.CompletedTask;
                 }
             };
